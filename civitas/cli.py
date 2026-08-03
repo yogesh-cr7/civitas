@@ -3,6 +3,7 @@
     python -m civitas index                 build the local index (fast, free)
     python -m civitas query "..."            retrieve the top-k passages
     python -m civitas query "..." --llm      also synthesize an answer (needs API key)
+    python -m civitas eval                   run the retrieval eval set and print recall@k / MRR
 """
 from __future__ import annotations
 
@@ -40,6 +41,11 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(answer)
 
 
+def cmd_eval(args: argparse.Namespace) -> None:
+    from eval.run_eval import run
+    run(embedder_name=args.embedder)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="civitas", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -59,6 +65,10 @@ def main() -> None:
         help="Also synthesize a cited answer via the Anthropic API (requires ANTHROPIC_API_KEY)",
     )
     p_query.set_defaults(func=cmd_query)
+
+    p_eval = sub.add_parser("eval", help="Run the retrieval eval set (recall@k, MRR)")
+    p_eval.add_argument("--embedder", choices=["tfidf", "sentence-transformers"], default="tfidf")
+    p_eval.set_defaults(func=cmd_eval)
 
     args = parser.parse_args()
     args.func(args)
