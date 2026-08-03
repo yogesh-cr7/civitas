@@ -8,9 +8,9 @@ retrieval demo.
 Most RAG side-projects stop at "it retrieves something and an LLM answers."
 This one is about the other half: how do you know if it's actually any good,
 and how do you compare design choices (chunk size, embedding backend, prompt)
-with numbers instead of vibes? That eval layer lands in session 2. This
-session is the foundation it needs to stand on: a clean corpus, a correct
-ingestion pipeline, and retrieval that works without needing an API key.
+with numbers instead of vibes. There's a hand-written eval suite (32 questions
+with ground truth, recall@k and MRR) sitting on top of a clean corpus, a
+correct ingestion pipeline, and retrieval that works without needing an API key.
 
 ## Why this corpus
 
@@ -41,7 +41,7 @@ civitas/
   cli.py          `python -m civitas index|query`
 data/corpus/      the three source text files
 tests/            ingestion + retrieval regression tests
-eval/             placeholder -- the eval suite lands in session 2
+eval/             hand-written question set, recall@k / MRR metrics, eval runner
 ```
 
 Retrieval defaults to **TF-IDF**, not a downloaded embedding model. For a
@@ -91,11 +91,34 @@ can lose to a document that happens to share more surface words (e.g.
 "protect," "against") even when a differently-numbered amendment is the
 actually-correct answer, because the amendment text itself never spells out
 its own number. This is a real, reproducible failure mode — not a bug to
-quietly patch, but exactly the kind of thing the eval suite in session 2 is
-meant to catch and quantify, including whether semantic embeddings fix it.
+quietly patch, but exactly the kind of thing the eval suite below is built
+to catch and quantify.
+
+## Retrieval eval
+
+```bash
+python -m civitas eval
+```
+
+32 hand-written questions across the Constitution, amendments, and Federalist
+Papers, each checked against ground-truth metadata (document + article/amendment/
+essay number) rather than an exact chunk id, so re-chunking doesn't silently
+break the eval. Current numbers with the default TF-IDF backend:
+
+```
+recall@1: 0.50
+recall@3: 0.69
+recall@5: 0.72
+MRR:      0.58
+```
+
+About a third of the misses are the exact numeral-reference problem described
+above — queries like "the fourth amendment" or "federal income tax" that don't
+share enough vocabulary with the actual clause text. Whether semantic
+embeddings close that gap is still an open question.
 
 ## Roadmap
 
-- **Session 2**: eval suite — a hand-written question set with ground truth,
-  retrieval metrics (recall@k, MRR), answer-quality scoring, and a
-  side-by-side comparison of TF-IDF vs. sentence-transformers.
+- Compare TF-IDF against sentence-transformers on this same eval set
+- Score synthesized answers, not just retrieved passages
+- `.env.example` and a dependency-injected, tested LLM call path
