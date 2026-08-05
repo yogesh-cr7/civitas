@@ -22,7 +22,27 @@ SYSTEM_PROMPT = (
 )
 
 
-def synthesize_answer(query: str, chunks: list[Chunk], model: str = "claude-sonnet-4-5-20250929") -> str:
+def synthesize_answer(query: str, chunks: list[Chunk], call_model) -> str:
+    """Build the prompt from `chunks` and hand it to `call_model`.
+
+    `call_model` is injected - a function (system, messages) -> a response
+    object with `.content` (a list of blocks, each with `.type` and `.text`
+    for text blocks). That's exactly the shape Anthropic's SDK returns, so
+    tests can fake it with a plain object and no API key or network call -
+    see `make_model_caller()` for the real implementation.
+    """
+    context = "\n\n---\n\n".join(c.as_context() for c in chunks)
+    user_message = f"Context:\n\n{context}\n\n---\n\nQuestion: {query}"
+
+    response = call_model(SYSTEM_PROMPT, [{"role": "user", "content": user_message}])
+    return "".join(block.text for block in response.content if block.type == "text")
+
+
+def make_model_caller(model: str = "claude-sonnet-4-5-20250929"):
+    """Real call_model implementation using the Claude API.
+
+    Reads ANTHROPIC_API_KEY from the environment - see .env.example.
+    """
     try:
         import anthropic
     except ImportError as e:
@@ -34,18 +54,17 @@ def synthesize_answer(query: str, chunks: list[Chunk], model: str = "claude-sonn
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "ANTHROPIC_API_KEY is not set. Export it in your shell "
-            "(or add it to a .env file you load yourself) before using --llm."
+            "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add "
+            "your key before using --llm."
+        )
+    client = anthropic.Anthropic(api_key=api_key)
+
+    def call_model(system, messages):
+        return client.messages.create(
+            model=model,
+            max_tokens=1024,
+            system=system,
+            messages=messages,
         )
 
-    context = "\n\n---\n\n".join(c.as_context() for c in chunks)
-    user_message = f"Context:\n\n{context}\n\n---\n\nQuestion: {query}"
-
-    client = anthropic.Anthropic(api_key=api_key)
-    response = client.messages.create(
-        model=model,
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": user_message}],
-    )
-    return "".join(block.text for block in response.content if block.type == "text")
+    return call_model

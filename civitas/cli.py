@@ -35,9 +35,14 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(f"   {preview[:220]}{'...' if len(preview) > 220 else ''}\n")
 
     if args.llm:
-        from .llm import synthesize_answer
+        from .llm import make_model_caller, synthesize_answer
+        try:
+            call_model = make_model_caller()
+        except (ImportError, RuntimeError) as e:
+            print(f"\n{e}", file=sys.stderr)
+            sys.exit(1)
         print("Synthesizing answer with Claude...\n")
-        answer = synthesize_answer(args.query, [c for c, _ in results])
+        answer = synthesize_answer(args.query, [c for c, _ in results], call_model)
         print(answer)
 
 
