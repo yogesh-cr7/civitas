@@ -35,6 +35,12 @@ def cmd_query(args: argparse.Namespace) -> None:
         print(f"   {preview[:220]}{'...' if len(preview) > 220 else ''}\n")
 
     if args.llm:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass  # no python-dotenv installed - fall back to a real env var
+
         from .llm import make_model_caller, synthesize_answer
         try:
             call_model = make_model_caller()

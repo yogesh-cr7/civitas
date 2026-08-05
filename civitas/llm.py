@@ -55,7 +55,8 @@ def make_model_caller(model: str = "claude-sonnet-4-5-20250929"):
     if not api_key:
         raise RuntimeError(
             "ANTHROPIC_API_KEY is not set. Copy .env.example to .env and add "
-            "your key before using --llm."
+            "your key (pip install python-dotenv if you haven't), or export "
+            "ANTHROPIC_API_KEY directly in your shell."
         )
     client = anthropic.Anthropic(api_key=api_key)
 
