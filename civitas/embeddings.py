@@ -6,7 +6,7 @@ Two backends, picked by the caller:
   No download, no API key, works instantly on a 139-chunk corpus. This is
   the honest choice for a corpus this size -- semantic embeddings are not
   obviously better here, and that comparison is exactly the kind of thing
-  the eval suite (session 2) is meant to measure rather than assume.
+  the eval suite is meant to measure rather than assume.
 - "sentence-transformers": real dense semantic embeddings via the
   sentence-transformers library, for anyone who wants to install the extra
   ~500MB of dependencies and compare retrieval quality against TF-IDF.

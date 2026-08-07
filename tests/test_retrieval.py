@@ -52,8 +52,8 @@ def test_known_queries_retrieve_the_right_document(index, query, expected_title_
 
     They're intentionally close paraphrases of the source text (TF-IDF is a
     lexical method), which is the honest scope for this backend. The eval
-    suite (session 2) is where harder, more paraphrased queries get measured
-    properly across backends.
+    suite is where harder, more paraphrased queries get measured properly
+    across backends.
     """
     results = index.search(query, k=3)
     titles = [chunk.title for chunk, _ in results]
