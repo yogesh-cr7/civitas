@@ -48,9 +48,8 @@ Retrieval defaults to **TF-IDF**, not a downloaded embedding model. For a
 139-document corpus that's not a compromise — it's the honest choice: no
 multi-hundred-megabyte download, no GPU, instant indexing, and a lexical
 method is easy to reason about when something goes wrong. `sentence-transformers`
-is wired in as a drop-in alternative specifically so the eval suite can
-measure whether semantic embeddings actually help here, instead of assuming
-they do.
+is wired in as a drop-in alternative, and the eval suite below actually
+measures whether it's worth the download rather than assuming it is.
 
 ## Setup
 
@@ -98,27 +97,34 @@ to catch and quantify.
 
 ```bash
 python -m civitas eval
+python -m civitas eval --embedder sentence-transformers
 ```
 
 32 hand-written questions across the Constitution, amendments, and Federalist
 Papers, each checked against ground-truth metadata (document + article/amendment/
 essay number) rather than an exact chunk id, so re-chunking doesn't silently
-break the eval. Current numbers with the default TF-IDF backend:
+break the eval.
 
-```
-recall@1: 0.50
-recall@3: 0.69
-recall@5: 0.72
-MRR:      0.58
-```
+| metric    | TF-IDF | sentence-transformers |
+|-----------|--------|------------------------|
+| recall@1  | 0.50   | 0.62                   |
+| recall@3  | 0.69   | 0.84                   |
+| recall@5  | 0.72   | 0.91                   |
+| MRR       | 0.58   | 0.73                   |
 
-About a third of the misses are the exact numeral-reference problem described
-above — queries like "the fourth amendment" or "federal income tax" that don't
-share enough vocabulary with the actual clause text. Whether semantic
-embeddings close that gap is still an open question.
+Semantic embeddings win clearly on aggregate — recall@5 goes from 0.72 to
+0.91, and the numeral-reference problem above mostly resolves ("the fourth
+amendment" moves from a complete miss to rank 4). But it's not a strict
+improvement: two queries TF-IDF got exactly right at rank 1 — "equal
+protection under the law" and "ambition must be made to counteract ambition"
+— become complete misses for sentence-transformers, likely because a
+general-purpose sentence embedding doesn't weight exact legal phrasing as
+heavily as an overlapping-vocabulary method does. Semantic search is the
+better default here, but an aggregate MRR alone would hide the fact that it
+trades some failures for others rather than strictly fixing them.
 
 ## Roadmap
 
-- Compare TF-IDF against sentence-transformers on this same eval set
-- Score synthesized answers, not just retrieved passages
-- `.env.example` and a dependency-injected, tested LLM call path
+- Score synthesized answers, not just retrieved passages — including a
+  citation-fidelity check after finding a real case where the model cited a
+  source outside the retrieved context
