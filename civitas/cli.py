@@ -48,8 +48,16 @@ def cmd_query(args: argparse.Namespace) -> None:
             print(f"\n{e}", file=sys.stderr)
             sys.exit(1)
         print("Synthesizing answer with Claude...\n")
-        answer = synthesize_answer(args.query, [c for c, _ in results], call_model)
+        chunks = [c for c, _ in results]
+        answer = synthesize_answer(args.query, chunks, call_model)
         print(answer)
+
+        from eval.citation_check import check_citation_fidelity
+        problems = check_citation_fidelity(answer, chunks)
+        if problems:
+            print("\ncitation check found issues with this answer:", file=sys.stderr)
+            for p in problems:
+                print(f"  - {p}", file=sys.stderr)
 
 
 def cmd_eval(args: argparse.Namespace) -> None:
